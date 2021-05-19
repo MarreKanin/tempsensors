@@ -60,9 +60,65 @@ def main():
                 # Delete data in temp.txt
                 pass
 def senddata(battery, humidity, temprature, time, model, id, channel):
-        url = 'https://external-api.url'
+        url = 'https://external-api.url/transferTempData.php'
         data = {"time": time, "model": model, "housecode": id, "channel": channel, "battery": battery, "temp": temprature, "humidity": humidity}
         thesending = requests.post(url, data=data, verify=False)
 if __name__ == "__main__":
         main()
+```
+
+### Recieving data
+
+I have a server running with mariahDb and php with a simple, unsecure php script that recieves data and stores it in the database. transferTempData.php:
+
+```php
+<?php
+if ($_SERVER['REQUEST_METHOD'] == 'GET'){
+    echo "Hello, this is a API for uploading tempratures for the server";
+}
+
+if ($_SERVER['REQUEST_METHOD'] == 'POST') {
+    require('config.php');
+    $time =  $_POST['time'];
+    $model =  $_POST['model'];
+    $housecode = $_POST['housecode'];
+    $channel = $_POST['channel'];
+    $battery = $_POST['battery'];
+    $temp =  $_POST['temp'];
+    $humidity = $_POST['humidity'];
+    echo "<br />";
+    echo "time: " . $time . "<br />";
+    echo "model: " . $model . "<br />";
+    echo "housecode: " . $housecode . "<br />";
+    echo "channel: " . $channel . "<br />";
+    echo "battery: " . $battery . "<br />";
+    echo "temp: " . $temp . "<br />";
+    echo "humidity: " . $humidity . "<br />";
+    try {
+        $sql = "INSERT into homeoutside (time, model, housecode, channel, battery, temp, humidity) VALUES( '$time', '$model', '$housecode', '$channel', '$battery', '$temp', '$humidity' )";
+        $statement=$db->prepare($sql);
+        $statement->execute();
+        echo json_encode("ok");
+        }
+
+        catch(PDOException $e)
+        {
+        echo $sql . "<br>" . $e->getMessage();
+        }
+    }
+
+?>
+```
+
+config.php:
+
+```php
+<?php
+    $options = array(PDO::MYSQL_ATTR_INIT_COMMAND => 'SET NAMES utf8');
+    try { $db = new PDO("mysql:host={"hostname"};dbname={"dbname"};charset=utf8", "username", "password", $options); }
+    catch(PDOException $ex){ die("Failed to connect to the database: " . $ex->getMessage());}
+    $db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+    $db->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC);
+    error_reporting(E_ERROR | E_WARNING | E_PARSE);
+?>
 ```
